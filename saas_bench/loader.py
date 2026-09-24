@@ -34,14 +34,14 @@ def load_tasks(tasks_root: str) -> list[dict]:
             continue
         verify_file = task_dir / "verify.py"
         try:
-            meta = json.loads(meta_file.read_text())
+            meta = json.loads(meta_file.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as e:
             print(f"[loader] skipping {task_dir.name}: failed to parse meta.json ({e})", flush=True)
             continue
         tasks.append({
             "task_id": meta.get("task_id", task_dir.name),
             "category_id": meta.get("category_id", task_dir.parent.name),
-            "description_md": desc_file.read_text(),
+            "description_md": desc_file.read_text(encoding="utf-8"),
             "meta": meta,
             "verify_py_path": str(verify_file) if verify_file.exists() else None,
         })

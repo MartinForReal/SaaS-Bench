@@ -12,6 +12,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import traceback
@@ -21,6 +22,11 @@ from datetime import datetime
 from pathlib import Path
 
 import yaml
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 from saas_bench.grading import make_grader
 from saas_bench.loader import build_prompt, load_tasks
@@ -429,8 +435,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--apps-yaml", default="saas_bench/apps.yaml")
     p.add_argument("--agent-module", default="saas_bench.agent",
                    help="Python module exposing async run_task(...); the bring-your-own-agent seam")
-    p.add_argument("--target-backend", default="slotmanager", choices=["slotmanager", "playground"],
-                   help="Where target apps run: 'slotmanager' (local docker) or 'playground' (hosted GKE service)")
+    p.add_argument("--target-backend", default="slotmanager", choices=["slotmanager", "k8s", "playground"],
+                   help="Where target apps run: 'slotmanager' (local docker), 'k8s' (Kubernetes manifests), or 'playground' (hosted GKE service)")
     p.add_argument("--grade-backend", default="local", choices=["local", "service"],
                    help="Where verify.py runs: 'local' (in-process) or 'service' (hosted playground service)")
     p.add_argument("--playground-url", default="",
@@ -459,10 +465,10 @@ def _validate_backend_combo(target: str, grade: str, playground_url: str = "") -
             "--target-backend playground requires --grade-backend service "
             "(the playground target doesn't set slot_id/port_map/hostname that local grading needs)"
         )
-    if target == "slotmanager" and grade != "local":
+    if target in {"slotmanager", "k8s"} and grade != "local":
         raise SystemExit(
-            "--target-backend slotmanager requires --grade-backend local "
-            "(slotmanager doesn't set the service_run_id that service grading needs)"
+            f"--target-backend {target} requires --grade-backend local "
+            "(local targets don't set the service_run_id that service grading needs)"
         )
     if (target == "playground" or grade == "service") and not playground_url:
         raise SystemExit(

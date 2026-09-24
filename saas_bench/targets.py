@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 
+from saas_bench.k8s_slot import K8sSlotManager
 from saas_bench.slot import SlotManager
 
 
@@ -89,6 +90,46 @@ class SlotManagerTarget(TargetEnvironment):
             self._slot.stop_apps(self._known)
 
 
+class K8sTarget(TargetEnvironment):
+    """Kubernetes target: per-task app namespaces from generated manifests."""
+
+    def __init__(self, apps_config: dict, slot_id: int, hostname: str, use_isolation: bool):
+        self.apps_config = apps_config
+        self.slot_id = slot_id
+        self.hostname = hostname
+        self.use_isolation = use_isolation
+        self._slot = K8sSlotManager(apps_config, slot_id)
+        self._known: list[str] = []
+
+    def prepare(self, task: dict, run_id: int) -> PreparedEnv:
+        os.environ["SAAS_BACKEND"] = "k8s"
+        os.environ["SAAS_K8S_NAMESPACE_PREFIX"] = f"saasbench-{self._slot.slot_prefix}"
+        sites: list[str] = task.get("meta", {}).get("meta_data", {}).get("sites", [])
+        known = [app for app in sites if app in self.apps_config]
+        unknown = [app for app in sites if app not in self.apps_config]
+        if unknown:
+            print(
+                f"  [slot {self.slot_id}][{task['task_id']}] unknown apps {unknown}, skipping isolation",
+                flush=True,
+            )
+        self._known = known
+        port_map: dict[str, int] = {}
+        if known:
+            self._slot.start_apps(known, hostname=self.hostname)
+            port_map = self._slot.get_port_map(known)
+        gradeable = bool(task.get("verify_py_path"))
+        return PreparedEnv(
+            url_map={app: f"http://{self.hostname}:{port}" for app, port in port_map.items()},
+            verify_context={"slot_id": self.slot_id, "port_map": port_map, "hostname": self.hostname},
+            gradeable=gradeable,
+            skip_reason="" if gradeable else "verification skipped: task has no verifier",
+        )
+
+    def release(self) -> None:
+        if self._known:
+            self._slot.stop_apps(self._known)
+
+
 def make_target(
     backend: str,
     apps_config: dict,
@@ -99,11 +140,13 @@ def make_target(
 ) -> TargetEnvironment:
     """Construct the target backend selected by ``--target-backend``.
 
-    ``slotmanager`` is the upstream local-docker path. ``playground`` is an HTTP client to the
-    hosted GKE per-run preview-env service (``--playground-url`` required).
+    ``slotmanager`` is the upstream local-docker path. ``k8s`` is the local Kubernetes
+    manifests path. ``playground`` is an HTTP client to the hosted GKE service.
     """
     if backend == "slotmanager":
         return SlotManagerTarget(apps_config, slot_id, hostname, use_isolation)
+    if backend == "k8s":
+        return K8sTarget(apps_config, slot_id, hostname, use_isolation)
     if backend == "playground":
         from saas_bench.playground import PlaygroundTarget
         return PlaygroundTarget(playground_url, api_key=os.environ.get("PLAYGROUND_API_KEY", ""))
