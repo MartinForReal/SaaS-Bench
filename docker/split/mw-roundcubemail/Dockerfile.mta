@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1.7
+#
+# Split image: ONE service per container.
+#
+# Source bundle : mw-roundcubemail
+# Service      : mta
+# Runs         : /usr/lib/postfix/sbin/master -d
+#
+# The base image already ships the binaries, config and fixtures; this image only
+# pins the entrypoint to a single service so the database / cache / web server can
+# run as their own container instead of being launched by supervisord.
+#
+# Runtime expectations:
+#   * the data directory must be a volume or emptyDir mounted at the path the
+#     service uses by default;
+#   * peer services are reached over the network via env vars (DB_HOST, REDIS_HOST,
+#     ...) that the app service must be given instead of its bundled defaults.
+
+ARG BASE_IMAGE=mw-roundcubemail:latest
+FROM ${BASE_IMAGE}
+
+USER root
+ENTRYPOINT []
+CMD ["/usr/lib/postfix/sbin/master", "-d"]
