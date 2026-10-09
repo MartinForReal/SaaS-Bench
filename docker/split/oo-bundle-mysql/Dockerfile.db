@@ -1,0 +1,2 @@
+# One-service image: OnlyOffice MySQL only.
+FROM oo-bundle-mysql:latest
