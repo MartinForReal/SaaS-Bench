@@ -19,7 +19,8 @@ RUN set -eux; \
       sleep 1; \
     done; \
     [ "$ok" = "1" ] || { echo "FATAL: mariadb socket never came up"; exit 1; }; \
-__SEED__     mariadb-admin --socket=/run/mysqld/snap.sock shutdown; \
+__SEED__     mariadb --socket=/run/mysqld/snap.sock -e "CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED BY ''; GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1' WITH GRANT OPTION; FLUSH PRIVILEGES;" && \
+    mariadb-admin --socket=/run/mysqld/snap.sock shutdown; \
     rm -f /opt/snapshot/mysql/*.pid /opt/snapshot/mysql/*.err /run/mysqld/snap.sock
 COPY entrypoint-db.sh /opt/saas-bench/entrypoint-db.sh
 RUN chmod +x /opt/saas-bench/entrypoint-db.sh
