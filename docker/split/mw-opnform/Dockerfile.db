@@ -1,10 +1,25 @@
 # syntax=docker/dockerfile:1.7
-# snapshot db image for mw-opnform (postgres datadir with the opnform dump restored)
 ARG BASE_IMAGE=mw-opnform:latest
 FROM ${BASE_IMAGE} AS snapshot
 USER root
-ENV PGDATA=/var/lib/postgresql/data     DB_DATABASE=forge DB_USERNAME=forge DB_PASSWORD=forge
-RUN set -eux;     PG_BIN=/usr/libexec/postgresql16; [ -d "$PG_BIN" ] || PG_BIN=/usr/bin;     mkdir -p "$PGDATA" /run/postgresql;     id postgres >/dev/null 2>&1 || adduser -D -h /var/lib/postgresql postgres;     chown -R postgres:postgres "$PGDATA" /run/postgresql;     su - postgres -s /bin/bash -c "$PG_BIN/initdb -D $PGDATA";     echo "host all all 127.0.0.1/32 trust" >> "$PGDATA/pg_hba.conf";     echo "listen_addresses = '127.0.0.1'" >> "$PGDATA/postgresql.conf";     su - postgres -s /bin/bash -c "$PG_BIN/pg_ctl -D $PGDATA -l /tmp/pg.log -w start";     su - postgres -s /bin/bash -c "psql -c "CREATE USER forge WITH PASSWORD 'forge' SUPERUSER;"";     su - postgres -s /bin/bash -c "psql -c "CREATE DATABASE forge OWNER forge;"";     su - postgres -s /bin/bash -c "pg_restore -U forge -d forge --no-owner --no-privileges /docker-entrypoint-initdb.d/opnform_dump.dump" || true;     su - postgres -s /bin/bash -c "$PG_BIN/pg_ctl -D $PGDATA -m fast -w stop";     rm -f "$PGDATA/postmaster.pid"
+RUN set -eux; \
+    mkdir -p /opt/snapshot/pgdata /run/postgresql; \
+    chown -R postgres:postgres /opt/snapshot/pgdata /run/postgresql; \
+    su postgres -s /bin/bash -c "initdb -D /opt/snapshot/pgdata"; \
+    echo "host all all 127.0.0.1/32 trust" >> /opt/snapshot/pgdata/pg_hba.conf; \
+    echo "listen_addresses = 127.0.0.1" >> /opt/snapshot/pgdata/postgresql.conf; \
+    su postgres -s /bin/bash -c "pg_ctl -D /opt/snapshot/pgdata -o '-k /run/postgresql -p 5433' -l /tmp/snap.log -w start"; \
+    ok=0; \
+    for i in $(seq 1 60); do \
+      if su postgres -s /bin/bash -c "pg_isready -h 127.0.0.1 -p 5433" >/dev/null 2>&1; then ok=1; break; fi; \
+      sleep 1; \
+    done; \
+    [ "$ok" = "1" ] || { echo "FATAL: postgres never became ready"; cat /tmp/snap.log || true; exit 1; }; \
+    su postgres -s /bin/bash -c "psql -p 5433 -c \"CREATE USER forge WITH PASSWORD 'forge' SUPERUSER;\"" && \
+    su postgres -s /bin/bash -c "psql -p 5433 -c \"CREATE DATABASE forge OWNER forge;\"" && \
+    su postgres -s /bin/bash -c "pg_restore -p 5433 -U forge -d forge --no-owner --no-privileges /docker-entrypoint-initdb.d/opnform_dump.dump" || true && \
+     su postgres -s /bin/bash -c "pg_ctl -D /opt/snapshot/pgdata -m fast -w stop"; \
+    rm -f /opt/snapshot/pgdata/postmaster.pid
 
 FROM scratch AS runtime
 COPY --from=snapshot / /

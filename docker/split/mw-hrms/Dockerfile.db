@@ -1,9 +1,23 @@
 # syntax=docker/dockerfile:1.7
-# snapshot db image for mw-hrms (mariadb datadir with the HRMS seed already imported)
 ARG BASE_IMAGE=mw-hrms:latest
 FROM ${BASE_IMAGE} AS snapshot
 USER root
-RUN set -eux;     mkdir -p /var/run/mysqld /var/lib/mysql;     chown -R mysql:mysql /var/run/mysqld /var/lib/mysql;     mysql_install_db --user=mysql --datadir=/var/lib/mysql >/dev/null;     mysqld_safe --user=mysql --datadir=/var/lib/mysql --bind-address=127.0.0.1 &     for i in $(seq 1 60); do mysqladmin -u root -phrms123456 ping --silent 2>/dev/null && break; sleep 2; done;     mysql -u root -phrms123456 -e "CREATE DATABASE IF NOT EXISTS \`_041806a949bb7dd0\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;";     mysql -u root -phrms123456 _041806a949bb7dd0 < /mw-hrms-dump.sql;     mysql -u root -phrms123456 -e "CREATE USER IF NOT EXISTS '_041806a949bb7dd0'@'%' IDENTIFIED BY '1yMa70SeWYjkbmK9'; GRANT ALL PRIVILEGES ON \`_041806a949bb7dd0\`.* TO '_041806a949bb7dd0'@'%'; FLUSH PRIVILEGES;";     mysqladmin -u root -phrms123456 shutdown;     rm -rf /var/lib/mysql/*.pid /var/lib/mysql/*.err /var/run/mysqld/*
+RUN set -eux; \
+    mkdir -p /opt/snapshot/mysql /run/mysqld; \
+    chown -R mysql:mysql /opt/snapshot/mysql /run/mysqld; \
+    mariadb-install-db --user=mysql --datadir=/opt/snapshot/mysql >/dev/null; \
+    mysqld_safe --user=mysql --datadir=/opt/snapshot/mysql --socket=/run/mysqld/snap.sock --skip-networking & \
+    ok=0; \
+    for i in $(seq 1 120); do \
+      if mariadb-admin --socket=/run/mysqld/snap.sock ping >/dev/null 2>&1; then ok=1; break; fi; \
+      sleep 1; \
+    done; \
+    [ "$ok" = "1" ] || { echo "FATAL: mariadb socket never came up"; exit 1; }; \
+    mariadb --socket=/run/mysqld/snap.sock -e "CREATE DATABASE IF NOT EXISTS \`_041806a949bb7dd0\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" && \
+    mariadb --socket=/run/mysqld/snap.sock _041806a949bb7dd0 < /mw-hrms-dump.sql && \
+    mariadb --socket=/run/mysqld/snap.sock -e "CREATE USER IF NOT EXISTS '_041806a949bb7dd0'@'%' IDENTIFIED BY '1yMa70SeWYjkbmK9'; GRANT ALL PRIVILEGES ON \`_041806a949bb7dd0\`.* TO '_041806a949bb7dd0'@'%'; FLUSH PRIVILEGES;" && \
+     mariadb-admin --socket=/run/mysqld/snap.sock shutdown; \
+    rm -f /opt/snapshot/mysql/*.pid /opt/snapshot/mysql/*.err /run/mysqld/snap.sock
 
 FROM scratch AS runtime
 COPY --from=snapshot / /
