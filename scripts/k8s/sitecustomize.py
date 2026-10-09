@@ -55,3 +55,38 @@ def _check_call(*args, **kwargs):
 subprocess.run = _run
 subprocess.check_output = _check_output
 subprocess.check_call = _check_call
+
+
+def _install_gateway_requests_shim() -> None:
+    import json
+    import urllib.parse
+
+    try:
+        import requests
+    except Exception:
+        return
+
+    raw = os.environ.get("SAAS_GATEWAY_PORTS", "")
+    if not raw:
+        return
+    try:
+        port_hosts = json.loads(raw)
+    except json.JSONDecodeError:
+        return
+    if not port_hosts:
+        return
+
+    original_request = requests.Session.request
+
+    def request(self, method, url, *args, **kwargs):
+        parsed = urllib.parse.urlsplit(str(url))
+        if parsed.scheme in {"http", "https"} and parsed.port is not None:
+            host = port_hosts.get(str(parsed.port))
+            if host:
+                url = urllib.parse.urlunsplit((parsed.scheme, host, parsed.path, parsed.query, parsed.fragment))
+        return original_request(self, method, url, *args, **kwargs)
+
+    requests.Session.request = request
+
+
+_install_gateway_requests_shim()

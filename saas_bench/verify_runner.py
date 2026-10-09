@@ -238,12 +238,17 @@ def _k8s_container_name(site: str, is_db: bool = False) -> str:
 
 def _build_k8s_exec_map(sites: list[str], slot_id: int) -> dict[str, dict]:
     mapping: dict[str, dict] = {}
+    lumina_layout = os.environ.get("SAAS_K8S_LAYOUT", "").lower() == "lumina"
     namespace_prefix = os.environ.get("SAAS_K8S_NAMESPACE_PREFIX", "saasbench")
     for site in sites:
         cfg = _site_config(site)
         prefix = f"{_SLOT_PREFIX}_{slot_id}_{site}"
-        namespace = f"{namespace_prefix}-{site}"
-        selector = f"app={site}"
+        if lumina_layout:
+            namespace = f"saas-bench-slot-{slot_id}"
+            selector = f"statefulset.kubernetes.io/pod-name=saas-bench-{site}-{slot_id}"
+        else:
+            namespace = f"{namespace_prefix}-{site}"
+            selector = f"app={site}"
 
         app_container = prefix + cfg["container_suffix"]
         mapping[app_container] = {
@@ -316,6 +321,7 @@ def build_verify_env(
     slot_id: int,
     port_map: dict[str, int],
     hostname: str,
+    host_map: dict[str, str] | None = None,
 ) -> dict[str, str]:
     """Build the env dict required by verify.py (layered on top of the system env)."""
     env = os.environ.copy()
@@ -349,6 +355,15 @@ def build_verify_env(
         if cfg["db_var"] is not None:
             db_container = prefix + cfg["db_suffix"]
             env[cfg["db_var"]] = db_container
+
+    if host_map:
+        gateway_ports = {
+            str(port_map[site]): host_map[site]
+            for site in sites
+            if site in host_map and site in port_map
+        }
+        env["SAAS_GATEWAY_HOSTS"] = json.dumps(host_map)
+        env["SAAS_GATEWAY_PORTS"] = json.dumps(gateway_ports)
 
     return env
 
@@ -456,6 +471,7 @@ def run_verify(
     hostname: str,
     result_dir: str,
     run_suffix: str = "",
+    host_map: dict[str, str] | None = None,
 ) -> dict:
     """Run verify.py, return the result dict, and write it to {task_id}{run_suffix}_verify.json.
 
@@ -474,7 +490,7 @@ def run_verify(
         return _save({"task_id": task_id, "status": "SKIP", "score": 0.0,
                       "checks": [], "error": "no verify.py"})
 
-    env = build_verify_env(task, slot_id, port_map, hostname)
+    env = build_verify_env(task, slot_id, port_map, hostname, host_map)
 
     try:
         proc = subprocess.run(
