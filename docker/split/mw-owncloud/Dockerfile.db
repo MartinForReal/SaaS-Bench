@@ -1,0 +1,2 @@
+# One-service image: ownCloud MariaDB only.
+FROM mw-owncloud-mariadb:latest

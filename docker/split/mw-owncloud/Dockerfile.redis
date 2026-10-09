@@ -1,0 +1,2 @@
+# One-service image: ownCloud Redis only.
+FROM redis:6
