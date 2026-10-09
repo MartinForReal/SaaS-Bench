@@ -21,6 +21,8 @@ RUN set -eux; \
     [ "$ok" = "1" ] || { echo "FATAL: mariadb socket never came up"; exit 1; }; \
 __SEED__     mariadb-admin --socket=/run/mysqld/snap.sock shutdown; \
     rm -f /opt/snapshot/mysql/*.pid /opt/snapshot/mysql/*.err /run/mysqld/snap.sock
+COPY entrypoint-db.sh /opt/saas-bench/entrypoint-db.sh
+RUN chmod +x /opt/saas-bench/entrypoint-db.sh
 
 FROM scratch AS runtime
 COPY --from=snapshot / /
@@ -46,6 +48,8 @@ RUN set -eux; \
     [ "$ok" = "1" ] || { echo "FATAL: postgres never became ready"; cat /tmp/snap.log || true; exit 1; }; \
 __SEED__     su postgres -s /bin/bash -c "pg_ctl -D /opt/snapshot/pgdata -m fast -w stop"; \
     rm -f /opt/snapshot/pgdata/postmaster.pid
+COPY entrypoint-db.sh /opt/saas-bench/entrypoint-db.sh
+RUN chmod +x /opt/saas-bench/entrypoint-db.sh
 
 FROM scratch AS runtime
 COPY --from=snapshot / /
@@ -77,8 +81,8 @@ FILES = {
 }
 
 SERVE = {
-    "mw-hrms": "#!/bin/sh\nset -e\nmkdir -p /var/lib/mysql\n[ -d /var/lib/mysql/mysql ] || cp -a /opt/snapshot/mysql/. /var/lib/mysql/\nexec mariadbd --user=mysql --datadir=/var/lib/mysql --bind-address=0.0.0.0\n",
-    "mw-booklore": "#!/bin/sh\nset -e\nmkdir -p /var/lib/mysql\n[ -d /var/lib/mysql/mysql ] || cp -a /opt/snapshot/mysql/. /var/lib/mysql/\nexec mariadbd --user=mysql --datadir=/var/lib/mysql --bind-address=0.0.0.0\n",
+    "mw-hrms": "#!/bin/sh\nset -e\nmkdir -p /var/lib/mysql\n[ -d /var/lib/mysql/mysql ] || cp -a /opt/snapshot/mysql/. /var/lib/mysql/\nexec mariadbd --user=mysql --datadir=/var/lib/mysql --bind-address=0.0.0.0 --port=3306 --skip-networking=0\n",
+    "mw-booklore": "#!/bin/sh\nset -e\nmkdir -p /var/lib/mysql\n[ -d /var/lib/mysql/mysql ] || cp -a /opt/snapshot/mysql/. /var/lib/mysql/\nexec mariadbd --user=mysql --datadir=/var/lib/mysql --bind-address=0.0.0.0 --port=3306 --skip-networking=0\n",
     "mw-pretix": "#!/bin/sh\nset -e\nmkdir -p /var/lib/postgresql/data /run/postgresql\nchown -R postgres:postgres /var/lib/postgresql/data /run/postgresql\n[ -f /var/lib/postgresql/data/PG_VERSION ] || cp -a /opt/snapshot/pgdata/. /var/lib/postgresql/data/\nexec su postgres -s /bin/bash -c \"postgres -D /var/lib/postgresql/data -k /run/postgresql\"\n",
     "mw-twenty": "#!/bin/sh\nset -e\nmkdir -p /var/lib/postgresql/data /run/postgresql\nchown -R postgres:postgres /var/lib/postgresql/data /run/postgresql\n[ -f /var/lib/postgresql/data/PG_VERSION ] || cp -a /opt/snapshot/pgdata/. /var/lib/postgresql/data/\nexec su-exec postgres postgres -D /var/lib/postgresql/data -k /run/postgresql\n",
     "mw-opnform": "#!/bin/sh\nset -e\nmkdir -p /var/lib/postgresql/data /run/postgresql\nchown -R postgres:postgres /var/lib/postgresql/data /run/postgresql\n[ -f /var/lib/postgresql/data/PG_VERSION ] || cp -a /opt/snapshot/pgdata/. /var/lib/postgresql/data/\nPG_BIN=/usr/libexec/postgresql16; [ -d \"$PG_BIN\" ] || PG_BIN=/usr/bin\nexec su - postgres -s /bin/bash -c \"$PG_BIN/postgres -D /var/lib/postgresql/data -k /run/postgresql\"\n",

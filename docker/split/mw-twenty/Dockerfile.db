@@ -20,6 +20,8 @@ RUN set -eux; \
     PG_DATABASE_URL="postgres://postgres:twenty_postgres_pass@127.0.0.1:5433/default" DISABLE_CRON_JOBS_REGISTRATION=true /app/entrypoint.sh true && \
      su postgres -s /bin/bash -c "pg_ctl -D /opt/snapshot/pgdata -m fast -w stop"; \
     rm -f /opt/snapshot/pgdata/postmaster.pid
+COPY entrypoint-db.sh /opt/saas-bench/entrypoint-db.sh
+RUN chmod +x /opt/saas-bench/entrypoint-db.sh
 
 FROM scratch AS runtime
 COPY --from=snapshot / /

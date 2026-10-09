@@ -1,0 +1,4 @@
+{"App":"mw-booklore-db","Exit":0,"Digest":"mw-booklore-db@sha256:33d93c33e9323934645b2f12166022518342030b111d2533400d36dda1b3d146","Streaming":true,"Scan":"not-run","Utc":"2026-10-09T12:23:57.7928529Z","Tail":""}
+{"App":"mw-hrms-db","Exit":0,"Digest":"mw-hrms-db@sha256:a9aef84f71866268a73db3abcd9e348f59cf6bc1bff5982b4b2d24de6884ea86","Streaming":true,"Scan":"not-run","Utc":"2026-10-09T12:44:13.3605043Z","Tail":""}
+{"App":"mw-booklore-db","Exit":0,"Digest":"mw-booklore-db@sha256:85323ab7448b60ef886d64b849bc4b8ec54b71cd81f5fa94ce98d5c9abc4e364","Streaming":true,"Scan":"not-run","Utc":"2026-10-09T13:14:28.2820261Z","Tail":""}
+{"App":"mw-hrms-db","Exit":0,"Digest":"mw-hrms-db@sha256:7e533af32220a07f473b1e823a571ef9e9000d264ca6922095bff80d41ee44ca","Streaming":true,"Scan":"not-run","Utc":"2026-10-09T13:16:03.8470988Z","Tail":""}

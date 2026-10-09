@@ -20,6 +20,8 @@ RUN set -eux; \
     su postgres -s /bin/bash -c "pg_restore -p 5433 -U forge -d forge --no-owner --no-privileges /docker-entrypoint-initdb.d/opnform_dump.dump" || true && \
      su postgres -s /bin/bash -c "pg_ctl -D /opt/snapshot/pgdata -m fast -w stop"; \
     rm -f /opt/snapshot/pgdata/postmaster.pid
+COPY entrypoint-db.sh /opt/saas-bench/entrypoint-db.sh
+RUN chmod +x /opt/saas-bench/entrypoint-db.sh
 
 FROM scratch AS runtime
 COPY --from=snapshot / /
