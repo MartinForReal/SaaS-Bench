@@ -1,17 +1,10 @@
 # syntax=docker/dockerfile:1.7
-#
-# Split image: ONE service per container (db).
-#
-# Base bundle : mw-booklore
-# Entrypoint  : added by this image (entrypoint-db.sh)
-#
-# The app container still runs the fixture / migrations before serving; the db and
-# redis containers only initialise their datadir (if empty) and then serve.
-
+# snapshot db image for mw-booklore (reuses the rebuild mysql-data datadir)
 ARG BASE_IMAGE=mw-booklore:latest
-FROM ${BASE_IMAGE}
-
+FROM ${BASE_IMAGE} AS snapshot
 USER root
-COPY entrypoint-db.sh /opt/saas-bench/entrypoint-db.sh
-RUN chmod +x /opt/saas-bench/entrypoint-db.sh
+RUN set -eux;     test -d /var/lib/mysql/mysql;     chown -R mysql:mysql /var/lib/mysql;     mkdir -p /run/mysqld; chown -R mysql:mysql /run/mysqld;     rm -f /var/lib/mysql/*.pid /var/lib/mysql/*.err /run/mysqld/*
+
+FROM scratch AS runtime
+COPY --from=snapshot / /
 ENTRYPOINT ["/opt/saas-bench/entrypoint-db.sh"]

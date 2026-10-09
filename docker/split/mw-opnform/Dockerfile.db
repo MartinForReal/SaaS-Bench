@@ -1,17 +1,11 @@
 # syntax=docker/dockerfile:1.7
-#
-# Split image: ONE service per container (db).
-#
-# Base bundle : mw-opnform
-# Entrypoint  : added by this image (entrypoint-db.sh)
-#
-# The app container still runs the fixture / migrations before serving; the db and
-# redis containers only initialise their datadir (if empty) and then serve.
-
+# snapshot db image for mw-opnform (postgres datadir with the opnform dump restored)
 ARG BASE_IMAGE=mw-opnform:latest
-FROM ${BASE_IMAGE}
-
+FROM ${BASE_IMAGE} AS snapshot
 USER root
-COPY entrypoint-db.sh /opt/saas-bench/entrypoint-db.sh
-RUN chmod +x /opt/saas-bench/entrypoint-db.sh
+ENV PGDATA=/var/lib/postgresql/data     DB_DATABASE=forge DB_USERNAME=forge DB_PASSWORD=forge
+RUN set -eux;     PG_BIN=/usr/libexec/postgresql16; [ -d "$PG_BIN" ] || PG_BIN=/usr/bin;     mkdir -p "$PGDATA" /run/postgresql;     id postgres >/dev/null 2>&1 || adduser -D -h /var/lib/postgresql postgres;     chown -R postgres:postgres "$PGDATA" /run/postgresql;     su - postgres -s /bin/bash -c "$PG_BIN/initdb -D $PGDATA";     echo "host all all 127.0.0.1/32 trust" >> "$PGDATA/pg_hba.conf";     echo "listen_addresses = '127.0.0.1'" >> "$PGDATA/postgresql.conf";     su - postgres -s /bin/bash -c "$PG_BIN/pg_ctl -D $PGDATA -l /tmp/pg.log -w start";     su - postgres -s /bin/bash -c "psql -c "CREATE USER forge WITH PASSWORD 'forge' SUPERUSER;"";     su - postgres -s /bin/bash -c "psql -c "CREATE DATABASE forge OWNER forge;"";     su - postgres -s /bin/bash -c "pg_restore -U forge -d forge --no-owner --no-privileges /docker-entrypoint-initdb.d/opnform_dump.dump" || true;     su - postgres -s /bin/bash -c "$PG_BIN/pg_ctl -D $PGDATA -m fast -w stop";     rm -f "$PGDATA/postmaster.pid"
+
+FROM scratch AS runtime
+COPY --from=snapshot / /
 ENTRYPOINT ["/opt/saas-bench/entrypoint-db.sh"]
