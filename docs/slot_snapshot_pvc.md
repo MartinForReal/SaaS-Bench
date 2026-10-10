@@ -192,10 +192,31 @@ Status: workstream 1 recommendation (2026-10-10)
 
 ### Current Per-App Matrix
 
-| App | Current tier | Evidence |
-|---|---|---|
-| booklore | Tier 2 snapshot | `booklore-golden-v5`; PVC recreated; slot reset returned ready |
-| All other apps | Tier 3 provision | Default `resetStrategy=provision` until per-app reset proof exists |
+| App | Reset tier | Persisted state | Evidence / next proof |
+|---|---|---|---|
+| code-server | Tier 3 provision | workspace files | Pod reset works; PVC snapshot only if warm workspace reset is required |
+| openproject | Tier 3 provision | PostgreSQL + assets | PostgreSQL sidecar migrates on boot; assets still need PVC snapshot for warm reset |
+| metabase | Tier 3 provision | H2 file `/metabase-data/metabase.db` | File-backed; promote to Tier 2 only with PVC snapshot proof |
+| baserow | Tier 3 provision | PostgreSQL + Redis | Bootstrap sidecar creates admin; DB reset still full provision |
+| twenty | Tier 3 provision | PostgreSQL + Redis | Full provision until operator or snapshot reset is proven |
+| bigcapital | Tier 3 provision | MySQL + Redis | Full provision until DB reset is proven |
+| hrms | Tier 3 provision | MariaDB + Redis + files | Slot 1 DB user bootstrap proven; still full provision until snapshot/operator reset |
+| pretix | Tier 3 provision | PostgreSQL + Redis + data | Full provision until DB/data reset is proven |
+| openemr | Tier 3 provision | MariaDB | Full provision until DB reset is proven |
+| opnform | Tier 3 provision | PostgreSQL + Redis | Full provision until DB reset is proven |
+| onlyoffice | Tier 3 provision | MySQL + Elasticsearch + Redis/cache | Heaviest stack; full provision until operator reset is proven |
+| mattermost | Tier 3 provision | PostgreSQL + Bleve files | Full provision; Bleve/config files need PVC snapshot if warm reset is desired |
+| owncloud | Tier 3 provision | MariaDB + Redis + data | Full provision; data and DB reset still needed |
+| roundcubemail | Tier 3 provision | MariaDB + mail data | Full provision; SQLite migration would change tier |
+| grocy | Tier 3 provision | SQLite `/config/data/grocy.db` | Candidate Tier 2 PVC snapshot; proof pending |
+| recipya | Tier 3 provision | SQLite/config + files | Candidate Tier 2 PVC snapshot; file path proof pending |
+| farmos | Tier 3 provision | SQLite + Drupal files | Candidate Tier 2 PVC snapshot; proof pending |
+| e-label | Tier 3 provision | MSSQL Express | Full provision until MSSQL reset strategy is proven |
+| siyuan | Tier 3 provision | SQLite workspace | Candidate Tier 2 PVC snapshot; proof pending |
+| watcharr | Tier 3 provision | SQLite `/data/watcharr.db` | Candidate Tier 2 PVC snapshot; proof pending |
+| booklore | Tier 2 snapshot | MariaDB datadir | `booklore-golden-v5`; PVC recreated; slot reset returned ready; seeded split DB image committed as `8446498` |
+| mediacms | Tier 3 provision | PostgreSQL + media files | Full provision until DB reset is proven |
+| photoprism | Tier 3 provision | MariaDB or SQLite + originals/cache | Candidate Tier 2 PVC snapshot if moved to SQLite; proof pending |
 
 ### Controller Rules
 
