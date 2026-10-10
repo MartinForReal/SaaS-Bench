@@ -205,6 +205,10 @@ _K8S_CONTAINER_NAMES = {
     "owncloud": {"app": "owncloud", "db": "mariadb"},
     "onlyoffice": {"app": "community", "db": "mysql"},
     "pretix": {"app": "pretix", "db": "db"},
+    "hrms": {"app": "hrms", "db": "db"},
+    "booklore": {"app": "booklore", "db": "db"},
+    "openproject": {"app": "openproject", "db": "db"},
+    "photoprism": {"app": "photoprism", "db": "mariadb"},
 }
 
 
@@ -500,7 +504,7 @@ def run_verify(
             text=True,
             # 600s: tightened verifiers recompute ground truth (software_041 runs the
             # full ctest suite ~2m40s; software_031/034 re-run test/coverage commands).
-            timeout=600,
+            timeout=int(os.environ.get("SAAS_VERIFY_TIMEOUT_SEC", "600")),
         )
     except subprocess.TimeoutExpired:
         return _save({"task_id": task_id, "status": "ERROR", "score": 0.0,
