@@ -1,0 +1,443 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: saas-bench-slot-4
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tier4-pg-app
+  namespace: saas-bench-slot-4
+type: kubernetes.io/basic-auth
+stringData:
+  username: postgres
+  password: postgres
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: tier4-pg
+  namespace: saas-bench-slot-4
+spec:
+  instances: 1
+  storage:
+    size: 8Gi
+  bootstrap:
+    initdb:
+      database: postgres
+      owner: postgres
+      secret:
+        name: tier4-pg-app
+      postInitSQL:
+      - "CREATE ROLE baserow LOGIN PASSWORD 'baserow';"
+      - "CREATE DATABASE baserow OWNER baserow;"
+      - "CREATE ROLE mattermost LOGIN PASSWORD 'mattermost';"
+      - "CREATE DATABASE mattermost OWNER mattermost;"
+      - "CREATE ROLE openproject LOGIN PASSWORD 'openproject';"
+      - "CREATE DATABASE openproject OWNER openproject;"
+      - "CREATE ROLE opnform LOGIN PASSWORD 'opnform';"
+      - "CREATE DATABASE opnform OWNER opnform;"
+      - "CREATE ROLE pretix LOGIN PASSWORD 'pretix';"
+      - "CREATE DATABASE pretix OWNER pretix;"
+      - "CREATE ROLE twenty LOGIN PASSWORD 'twenty';"
+      - "CREATE DATABASE twenty OWNER twenty;"
+      - "CREATE ROLE mediacms LOGIN PASSWORD 'mediacms';"
+      - "CREATE DATABASE mediacms OWNER mediacms;"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tier4-mariadb-root
+  namespace: saas-bench-slot-4
+type: Opaque
+stringData:
+  password: root
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tier4-mariadb-bigcapital
+  namespace: saas-bench-slot-4
+type: Opaque
+stringData:
+  password: bigcapital
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tier4-mariadb-booklore
+  namespace: saas-bench-slot-4
+type: Opaque
+stringData:
+  password: booklore
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tier4-mariadb-hrms
+  namespace: saas-bench-slot-4
+type: Opaque
+stringData:
+  password: hrms
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tier4-mariadb-openemr
+  namespace: saas-bench-slot-4
+type: Opaque
+stringData:
+  password: openemr
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tier4-mariadb-owncloud
+  namespace: saas-bench-slot-4
+type: Opaque
+stringData:
+  password: owncloud
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tier4-mariadb-photoprism
+  namespace: saas-bench-slot-4
+type: Opaque
+stringData:
+  password: photoprism
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tier4-mariadb-roundcubemail
+  namespace: saas-bench-slot-4
+type: Opaque
+stringData:
+  password: roundcubemail
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tier4-mariadb-onlyoffice
+  namespace: saas-bench-slot-4
+type: Opaque
+stringData:
+  password: onlyoffice
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: MariaDB
+metadata:
+  name: tier4-mariadb
+  namespace: saas-bench-slot-4
+spec:
+  replicas: 1
+  storage:
+    size: 8Gi
+  rootPasswordSecretKeyRef:
+    name: tier4-mariadb-root
+    key: password
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Database
+metadata:
+  name: bigcapital
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  characterSet: utf8mb4
+  collate: utf8mb4_unicode_ci
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: User
+metadata:
+  name: bigcapital
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  passwordSecretKeyRef:
+    name: tier4-mariadb-bigcapital
+    key: password
+  host: "%"
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Grant
+metadata:
+  name: bigcapital
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  username: bigcapital
+  database: bigcapital
+  host: "%"
+  privileges:
+    - ALL PRIVILEGES
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Database
+metadata:
+  name: booklore
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  characterSet: utf8mb4
+  collate: utf8mb4_unicode_ci
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: User
+metadata:
+  name: booklore
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  passwordSecretKeyRef:
+    name: tier4-mariadb-booklore
+    key: password
+  host: "%"
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Grant
+metadata:
+  name: booklore
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  username: booklore
+  database: booklore
+  host: "%"
+  privileges:
+    - ALL PRIVILEGES
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Database
+metadata:
+  name: hrms
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  characterSet: utf8mb4
+  collate: utf8mb4_unicode_ci
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: User
+metadata:
+  name: hrms
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  passwordSecretKeyRef:
+    name: tier4-mariadb-hrms
+    key: password
+  host: "%"
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Grant
+metadata:
+  name: hrms
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  username: hrms
+  database: hrms
+  host: "%"
+  privileges:
+    - ALL PRIVILEGES
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Database
+metadata:
+  name: openemr
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  characterSet: utf8mb4
+  collate: utf8mb4_unicode_ci
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: User
+metadata:
+  name: openemr
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  passwordSecretKeyRef:
+    name: tier4-mariadb-openemr
+    key: password
+  host: "%"
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Grant
+metadata:
+  name: openemr
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  username: openemr
+  database: openemr
+  host: "%"
+  privileges:
+    - ALL PRIVILEGES
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Database
+metadata:
+  name: owncloud
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  characterSet: utf8mb4
+  collate: utf8mb4_unicode_ci
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: User
+metadata:
+  name: owncloud
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  passwordSecretKeyRef:
+    name: tier4-mariadb-owncloud
+    key: password
+  host: "%"
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Grant
+metadata:
+  name: owncloud
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  username: owncloud
+  database: owncloud
+  host: "%"
+  privileges:
+    - ALL PRIVILEGES
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Database
+metadata:
+  name: photoprism
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  characterSet: utf8mb4
+  collate: utf8mb4_unicode_ci
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: User
+metadata:
+  name: photoprism
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  passwordSecretKeyRef:
+    name: tier4-mariadb-photoprism
+    key: password
+  host: "%"
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Grant
+metadata:
+  name: photoprism
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  username: photoprism
+  database: photoprism
+  host: "%"
+  privileges:
+    - ALL PRIVILEGES
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Database
+metadata:
+  name: roundcubemail
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  characterSet: utf8mb4
+  collate: utf8mb4_unicode_ci
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: User
+metadata:
+  name: roundcubemail
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  passwordSecretKeyRef:
+    name: tier4-mariadb-roundcubemail
+    key: password
+  host: "%"
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Grant
+metadata:
+  name: roundcubemail
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  username: roundcubemail
+  database: roundcubemail
+  host: "%"
+  privileges:
+    - ALL PRIVILEGES
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Database
+metadata:
+  name: onlyoffice
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  characterSet: utf8mb4
+  collate: utf8mb4_unicode_ci
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: User
+metadata:
+  name: onlyoffice
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  passwordSecretKeyRef:
+    name: tier4-mariadb-onlyoffice
+    key: password
+  host: "%"
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Grant
+metadata:
+  name: onlyoffice
+  namespace: saas-bench-slot-4
+spec:
+  mariaDbRef:
+    name: tier4-mariadb
+  username: onlyoffice
+  database: onlyoffice
+  host: "%"
+  privileges:
+    - ALL PRIVILEGES
