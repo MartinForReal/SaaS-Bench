@@ -245,7 +245,7 @@ def _build_k8s_exec_map(sites: list[str], slot_id: int) -> dict[str, dict]:
         prefix = f"{_SLOT_PREFIX}_{slot_id}_{site}"
         if lumina_layout:
             namespace = f"saas-bench-slot-{slot_id}"
-            selector = f"statefulset.kubernetes.io/pod-name=saas-bench-{site}-{slot_id}"
+            selector = f"statefulset.kubernetes.io/pod-name=saas-bench-{site}-0"
         else:
             namespace = f"{namespace_prefix}-{site}"
             selector = f"app={site}"
