@@ -167,3 +167,51 @@ For durable reset, replace emptyDir with a PVC created from VolumeSnapshot.
 3. Add PVC-from-snapshot mode in the slot manager renderer.
 4. Validate reset by deleting and recreating a slot from snapshot.
 5. Run run_verify on code-server/watcharr/twenty first, then all apps.
+
+## Reset Strategy Decision Matrix
+
+Status: workstream 1 recommendation (2026-10-10)
+
+### Strategy Comparison
+
+| Strategy | Reset warmth | State safety | Complexity | Best fit |
+|---|---|---|---|---|
+| App-native reset | Warm | High when app exposes a verified reset endpoint | Medium per app | Tier 1 apps with real reset endpoints |
+| PVC snapshot reset | Cold pod, fast DB boot | High after clean quiesce; risks torn snapshots if hot | Medium; CSI snapshot + PVC templates | Tier 2 persisted DB services |
+| Kubernetes DB service/operator | Usually warm | High if operator owns backup/restore | High; adds operator and CRDs | Shared DB platform, not per-slot default |
+| Schema/database-per-slot | Warm | Medium; app-level state may still leak | Medium | Multi-tenant DBs with no file-level reset |
+| Full provision | Cold | Highest isolation | High resource cost | Tier 3 default and unknown apps |
+
+### Recommended Reset Tiers
+
+| Tier | Definition | Option B eligible? | Slot-manager behavior |
+|---|---|---|---|
+| Tier 1: native | App resets without recreating pod; warmth preserved | Yes | Call app reset endpoint or exec reset command |
+| Tier 2: snapshot | Delete pod and PVC; StatefulSet recreates PVC from VolumeSnapshot | No, unless measured warm | Pod delete + PVC delete when resetStrategy=snapshot |
+| Tier 3: provision | Delete and recreate full workload | No | Standard pod reset or full reprovision |
+
+### Current Per-App Matrix
+
+| App | Current tier | Evidence |
+|---|---|---|
+| booklore | Tier 2 snapshot | `booklore-golden-v5`; PVC recreated; slot reset returned ready |
+| All other apps | Tier 3 provision | Default `resetStrategy=provision` until per-app reset proof exists |
+
+### Controller Rules
+
+- `resetStrategy` is explicit in `apps.json`.
+- Default is `provision`; this preserves current pod-only reset behavior.
+- PVC deletion happens only when:
+  - `SAAS_BENCH_RESET_PVCS=1`
+  - per-slot namespaces are enabled
+  - the app's `resetStrategy` is `snapshot`
+- Snapshot creation is not part of reset. Snapshots must be built and quiesced separately.
+- A reset that times out or errors must remain quarantined for admission until a later verified reset succeeds.
+
+### Snapshot Authoring Rules
+
+- Stop the DB cleanly before taking the snapshot.
+- Record snapshot name and app image tag together.
+- Prefer deleting and recreating the StatefulSet when claim templates change.
+- Keep one snapshot per app/image version and make rollback explicit.
+
